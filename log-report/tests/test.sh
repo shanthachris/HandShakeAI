@@ -1,10 +1,29 @@
 #!/bin/bash
+set -uo pipefail
 
-# pytest is baked into the environment image (environment/Dockerfile).
-pytest /tests/test_outputs.py -rA
+mkdir -p /logs/verifier
 
-if [ $? -eq 0 ]; then
-  echo 1 > /app/reward.txt
+pytest /tests/test_outputs.py -q
+status=$?
+
+if [ "$status" -eq 0 ]; then
+  reward=1
 else
-  echo 0 > /app/reward.txt
+  reward=0
 fi
+
+echo "$reward" > /logs/verifier/reward.txt
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+reward = int(Path('/logs/verifier/reward.txt').read_text().strip())
+ctrf = {
+    'reward': reward,
+    'score': reward,
+    'verifier': {'success': reward == 1},
+}
+Path('/logs/verifier/ctrf.json').write_text(json.dumps(ctrf))
+PY
+
+exit "$status"
