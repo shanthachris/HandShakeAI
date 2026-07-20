@@ -1,0 +1,2 @@
+# HandShakeAI
+LogReport Assesment
